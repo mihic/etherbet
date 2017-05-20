@@ -1,5 +1,5 @@
 pragma solidity ^0.4.6;
-contract ContractTemplate {
+contract BetContract {
   // state
   address mediator;
   address proposer;
@@ -9,11 +9,11 @@ contract ContractTemplate {
   mapping(address => uint) otherBets;
   address[] otherAddrs;
   bool canceled;
-  uint private betPool;
+  uint betPool;
   string homeTeam;
   string awayTeam;
   //constructor
-  function ContractTemplate(string homeTeam_, string awayTeam_, uint bettingOn_, 
+  function BetContract(string homeTeam_, string awayTeam_, uint bettingOn_, 
                             uint quota_, address mediator_) 
                             payable {
     mediator = mediator_;
