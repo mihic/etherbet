@@ -10,13 +10,15 @@ contract ContractTemplate {
   address[] otherAddrs;
   bool canceled;
   uint private betPool;
-  string betName;
+  string homeTeam;
+  string awayTeam;
   //constructor
-  function ContractTemplate(string betName_, uint bettingOn_, 
+  function ContractTemplate(string homeTeam_, string awayTeam_, uint bettingOn_, 
                             uint quota_, address mediator_) 
                             payable {
     mediator = mediator_;
-    betName = betName_;
+    homeTeam = homeTeam_;
+    awayTeam = awayTeam_;
     bettingOn = bettingOn_;
     quota = quota_;
     created = now;
