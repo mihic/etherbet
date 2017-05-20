@@ -1,17 +1,17 @@
 pragma solidity ^0.4.6;
 contract BetContract {
   // state
-  address mediator;
-  address proposer;
-  uint quota;
-  uint bettingOn;
-  uint created;
-  mapping(address => uint) otherBets;
-  address[] otherAddrs;
-  bool canceled;
-  uint betPool;
-  string homeTeam;
-  string awayTeam;
+  address public mediator;
+  address public proposer;
+  uint public quota;
+  uint public bettingOn;
+  uint public created;
+  mapping(address => uint) public otherBets;
+  address[] public otherAddrs;
+  bool public canceled;
+  uint public betPool;
+  string public homeTeam;
+  string public awayTeam;
   //constructor
   function BetContract(string homeTeam_, string awayTeam_, uint bettingOn_, 
                             uint quota_, address mediator_) 
@@ -24,7 +24,7 @@ contract BetContract {
     created = now;
     canceled = false;
     betPool = msg.value;
-    proposer = msg.sender;
+    proposer = msg.sender; 
   }
   //modifiers
   modifier onlyMediator {
@@ -44,6 +44,10 @@ contract BetContract {
       throw;
     }  
     _;
+  }
+
+  function getBetAmmount(address user) constant returns(uint a){
+    a = otherBets[user];
   }
 
 
