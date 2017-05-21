@@ -12,6 +12,7 @@ contract BetContract {
   uint public betPool;
   string public homeTeam;
   string public awayTeam;
+  uint public result;
   //constructor
   function BetContract(string homeTeam_, string awayTeam_, uint bettingOn_, 
                             uint quota_, address mediator_) 
@@ -25,6 +26,7 @@ contract BetContract {
     canceled = false;
     betPool = msg.value;
     proposer = msg.sender;
+    result = 3;
   }
   //modifiers
   modifier onlyMediator {
@@ -44,6 +46,10 @@ contract BetContract {
       throw;
     }  
     _;
+  }
+
+  function getNumOthers() constant returns (uint a){
+    a = otherAddrs.length;
   }
 
   function getBetAmmount(address user) constant returns(uint a){
@@ -67,15 +73,21 @@ contract BetContract {
     canceled = true;
   }
 
-  function mediate(uint result) onlyMediator {
-    if (result!=bettingOn){
-      //Izplacaj theOtherGuys
+  function mediate(uint result_) onlyMediator {
+    if (result_!=bettingOn){
+      //pay up!
       for (uint i = 0; i < otherAddrs.length; i++){
         if (!otherAddrs[i].send(otherBets[otherAddrs[i]])){
           throw;
         }
       }
     }
-    selfdestruct(proposer);
+    result = result_;
+    //send remaining money to the propposer
+    if(!proposer.send(address(this).balance)){
+      throw;
+    }else {
+      betPool = 0;
+    }
   }
 }
