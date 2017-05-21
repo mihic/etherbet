@@ -73,7 +73,7 @@ function generate_contracts_rec(res,id,num,ws) {
                 betContract.quota(function(err,quota) {
                     contract_res.quota = parseFloat(quota.toString()) / 1000;
                     if(id === proposer) {
-                        contract_res.quota = (1 / (1-contract_res.quota)) + 1;
+                        contract_res.quota = (1 / (contract_res.quota-1)) + 1;
                     }
                     betContract.bettingOn(function(err,bettingOn) {
                         contract_res.bettingOn = bettingOn.toString();
@@ -142,7 +142,7 @@ function connect(ws,req) {
 function new_bet(ws,req) {
     var betContractReturned = BetContract.new(req.homeTeam,req.awayTeam,
                                               req.bettingOn,(1 / (req.quota-1) + 1) * 1000,
-                                              req.mediator,
+                                              req.quota, req.mediator,
         {from : req.id, data : bytecode, gas : gasEstimate, value : req.amount},
         function(err,betContract) {
             if(!err) {
