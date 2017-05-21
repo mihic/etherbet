@@ -45,12 +45,6 @@ app.get("/", function(req,res) {
     res.send("OK");
 });
 
-app.post("/mediate", function(req,res) {
-    //poisci prave ws-je
-    //ws.send() // cela struktura, in posebi spremenjen
-    console.log(req.headers);
-});
-
 
 function generate_response(id,mediated,result,ws) {
     var res = {};
@@ -77,7 +71,10 @@ function generate_contracts_rec(res,id,num,ws) {
             betContract.mediator(function(err,mediator) {
                 contract_res.mediator = mediator;
                 betContract.quota(function(err,quota) {
-                    contract_res.quota = quota.toString();
+                    contract_res.quota = parseFloat(quota.toString()) / 1000;
+                    if(id === proposer) {
+                        contract_res.quota = (1 / (1-contract_res.quota)) + 1;
+                    }
                     betContract.bettingOn(function(err,bettingOn) {
                         contract_res.bettingOn = bettingOn.toString();
                         betContract.homeTeam(function(err,homeTeam) {
@@ -133,11 +130,10 @@ function incoming(ws,message) {
 };
 
 function test(ws,req) {
-    console.log(contracts);
+    generate_response(req.id,undefined,undefined,ws);
 };
 
 function connect(ws,req) {
-    console.log(req.id);
     clients.push(req.id);
     client_ws[req.id] = ws;
     generate_response(req.id,undefined,undefined,ws);
@@ -145,7 +141,7 @@ function connect(ws,req) {
 
 function new_bet(ws,req) {
     var betContractReturned = BetContract.new(req.homeTeam,req.awayTeam,
-                                              req.bettingOn,req.quota,
+                                              req.bettingOn,(1 / (req.quota-1) + 1) * 1000,
                                               req.mediator,
         {from : req.id, data : bytecode, gas : gasEstimate, value : req.amount},
         function(err,betContract) {
