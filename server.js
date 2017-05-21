@@ -17,6 +17,7 @@ var clients = [];
 var client_ws = {};
 
 var web3 = new Web3();
+web3.eth.getGasPrice(function(err){});
 web3.setProvider(TestRPC.provider({"seed" : 42}));
 
 var accounts;
@@ -35,7 +36,7 @@ var gasEstimate;
     var abi = compiledContract.contracts['BetContract'].interface;
     bytecode = compiledContract.contracts['BetContract'].bytecode;
     web3.eth.estimateGas({data: bytecode}, function(err,est) {
-        gasEstimate = 1.5 * est;
+        gasEstimate = 2 * est;
     });
     BetContract = web3.eth.contract(JSON.parse(abi));
 })();
@@ -66,6 +67,7 @@ function generate_contracts_rec(res,id,num,ws) {
     } else {
         var contract_res = {};
         var betContract = BetContract.at(contracts[num]);
+        contract_res.address = contracts[num];
         betContract.proposer(function(err,proposer) {
             contract_res.proposer = proposer;
             betContract.mediator(function(err,mediator) {
@@ -82,9 +84,9 @@ function generate_contracts_rec(res,id,num,ws) {
                             betContract.awayTeam(function(err,awayTeam) {
                                 contract_res.awayTeam = awayTeam;
                                 betContract.betPool(function(err,available) {
-                                    contract_res.available = available.toString();
+                                    contract_res.available = (parseFloat(available.toString())/contract_res.quota).toString();
                                     betContract.getBetAmmount(id,function(err,betAmount) {
-                                        contract_res.betAmount = betAmount.toString();
+                                        contract_res.betAmount = (parseFloat(betAmount.toString())).toString();
                                         betContract.result(function(err,result) {
                                             contract_res.result = result.toString();
                                             if(id === proposer || betAmount != 0) {
@@ -142,7 +144,7 @@ function connect(ws,req) {
 function new_bet(ws,req) {
     var betContractReturned = BetContract.new(req.homeTeam,req.awayTeam,
                                               req.bettingOn,(1 / (req.quota-1) + 1) * 1000,
-                                              req.quota, req.mediator,
+                                              req.quota*1000, req.mediator,
         {from : req.id, data : bytecode, gas : gasEstimate, value : req.amount},
         function(err,betContract) {
             if(!err) {
@@ -172,22 +174,20 @@ function new_bet(ws,req) {
 };
 
 function accept_bet(ws,req) {
-    var betContract = BetContract.at(contracts[0]);
+    var betContract = BetContract.at(req.address);
     betContract.bet(
         {
             "from" : req.id,
-            "value" : req.amount
+            "value" : req.amount,
+            "gas" : gasEstimate
         },
         function(err) {
-            if(err) {
-                console.log(err);
+            // PUSH
+            for(var i=0; i<clients.length; ++i) {
+                generate_response(clients[i],undefined,undefined,client_ws[clients[i]]);
             }
         });
 
-    // PUSH
-    for(var i=0; i<clients.length; ++i) {
-        generate_response(clients[i],undefined,undefined,client_ws[clients[i]]);
-    }
 };
 
 function mediate(ws,req) {

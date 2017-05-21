@@ -27,6 +27,7 @@ contract BetContract {
     betPool = msg.value*quota0 /1000;
     proposer = msg.sender;
     result = 3;
+    otherBets[proposer] = msg.value;
   }
   //modifiers
   modifier onlyMediator {
