@@ -50,23 +50,63 @@ app.post("/mediate", function(req,res) {
     //ws.send() // cela struktura, in posebi spremenjen
 });
 
-function generate_response(id, mediated, result, callback) {
+
+function generate_response(id,mediated,result,callback) {
     var res = {};
-    res.mediated = {"mediated" : mediated , "result" : result};
-    console.log(id);
-    web3.eth.getBalance(id,function(err,balance) {
+    res.mediated = {"mediated" : mediated, "result" : result},
+    web3.eth.getBalance(id, function(err,balance) {
         res.balance = balance;
-        var address = contracts[0];
-        var betContract = BetContract.at(address);
-        console.log(betContract.proposer);
-        betContract.proposer(function(err,proposer) {
-            res.proposer = proposer;
-            betContract.otherAddrs(0,function(err,otherAddrs) {
-                callback(otherAddrs);
-            });
-        })
+        generate_contracts(res,id,callback);
     });
-};
+}
+function generate_contracts(res,id,callback) {
+    var num = contracts.length;
+    res.my_bets = [];
+    res.bets = [];
+    generate_contracts_rec(res,id,num-1,callback);
+}
+function generate_contracts_rec(res,id,num,callback) {
+    if(num < 0) {
+        console.log(res);
+        callback(res);
+    } else {
+        var contract_res = {};
+        var betContract = BetContract.at(contracts[num]);
+        betContract.proposer(function(err,proposer) {
+            contract_res.proposer = proposer;
+            betContract.mediator(function(err,mediator) {
+                contract_res.mediator = mediator;
+                betContract.quota(function(err,quota) {
+                    contract_res.quota = quota;
+                    betContract.bettingOn(function(err,bettingOn) {
+                        contract_res.bettingOn = bettingOn;
+                        betContract.homeTeam(function(err,homeTeam) {
+                            contract_res.homeTeam = homeTeam;
+                            betContract.awayTeam(function(err,awayTeam) {
+                                contract_res.awayTeam = awayTeam;
+                                betContract.betPool(function(err,available) {
+                                    contract_res.available = available;
+                                    betContract.getBetAmmount(id,function(err,betAmount) {
+                                        contract_res.betAmount = betAmount;
+                                        betContract.result(function(err,result) {
+                                            contract_res.result = result;
+                                            if(betAmount != 0) {
+                                                res.my_bet.push(contract_res);
+                                            } else {
+                                                res.bets.push(contract_res);
+                                            }
+                                            generate_contracts_rec(res,id,num-1,id,callback);
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
+}
 
 function incoming(ws,message) {
     data = JSON.parse(message);
@@ -89,7 +129,7 @@ function incoming(ws,message) {
 };
 
 function test(ws,req) {
-    generate_response(req.id,undefined,undefined,console.log);
+    generate_response(req.id,undefined,undefined,ws.send);
 };
 
 function connect(ws,req) {
