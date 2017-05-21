@@ -24,7 +24,7 @@ contract BetContract {
     created = now;
     canceled = false;
     betPool = msg.value;
-    proposer = msg.sender; 
+    proposer = msg.sender;
   }
   //modifiers
   modifier onlyMediator {
@@ -52,10 +52,10 @@ contract BetContract {
 
 
   function bet() payable active{
-    address newGuy = msg.sender;
+    address newGuy = address(msg.sender);
     uint betSize = msg.value * quota / 1000;
     if(betSize<=0 || betSize>betPool){
-      throw;
+     throw;
     }
     betPool -= betSize;
     if (otherBets[newGuy]==0){

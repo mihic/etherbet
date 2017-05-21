@@ -30,9 +30,10 @@ var gasEstimate;
 
 (function init() {
     var source = fs.readFileSync("./contracts/BetContract.sol","utf8");
-    var compiledContract = solc.compile(source,0);
-    var abi = compiledContract.contracts['BetContract'].interface;
-    bytecode = compiledContract.contracts['BetContract'].bytecode;
+    var compiledContract = solc.compile(source,1);
+    console.log(compiledContract);
+    var abi = compiledContract.contracts[':BetContract'].interface;
+    bytecode = compiledContract.contracts[':BetContract'].bytecode;
     web3.eth.estimateGas({data: bytecode}, function(err,est) {
         gasEstimate = 1.5 * est;
     });
@@ -101,7 +102,7 @@ function new_bet(ws,req) {
     var betContractReturned = BetContract.new(req.homeTeam,req.awayTeam,
                                               req.bettingOn,req.quota,
                                               req.mediator,
-        {from : req.id, data : bytecode, gas : gasEstimate},
+        {from : req.id, data : bytecode, gas : gasEstimate, value : req.amount},
         function(err,betContract) {
             if(!err) {
                 // NOTE: The callback will fire twice!
@@ -137,6 +138,7 @@ function accept_bet(ws,req) {
         if(err) {
             console.log(err);
         }
+        console.log("jeeees");
         });
     // poisci ws od ownerja
     //ws.send() //pushaj accept ownerju
