@@ -30,7 +30,7 @@ var gasEstimate;
 
 (function init() {
     var source = fs.readFileSync("./contracts/BetContract.sol","utf8");
-    var compiledContract = solc.compile(source,1);
+    var compiledContract = solc.compile(source,0);
     var abi = compiledContract.contracts['BetContract'].interface;
     bytecode = compiledContract.contracts['BetContract'].bytecode;
     web3.eth.estimateGas({data: bytecode}, function(err,est) {
@@ -58,9 +58,10 @@ function generate_response(id, mediated, result, callback) {
         var address = contracts[0];
         var betContract = BetContract.at(address);
         console.log(betContract.proposer);
-        var proposer = betContract.proposer;
-        res.proposer = proposer;
-        callback(res);
+        betContract.proposer(function(err,proposer) {
+            res.proposer = proposer;
+            callback(res);
+        })
     });
 };
 
@@ -126,6 +127,17 @@ function new_bet(ws,req) {
 };
 
 function accept_bet(ws,req) {
+    var betContract = BetContract.at(contracts[0]);
+    betContract.bet(
+        {
+            "from" : req.id,
+            "value" : req.amount
+        },
+        function(err) {
+        if(err) {
+            console.log(err);
+        }
+        });
     // poisci ws od ownerja
     //ws.send() //pushaj accept ownerju
 };
