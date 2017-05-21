@@ -26,7 +26,6 @@ contract BetContract {
     canceled = false;
     betPool = msg.value*quota_/1000;
     proposer = msg.sender;
-    otherAddrs[proposer] = 0;
     result = 3;
   }
   //modifiers
@@ -71,7 +70,7 @@ contract BetContract {
       otherAddrs.push(newGuy);
     }
     otherBets[newGuy] += betSize;
-   
+    
   }
   function cancel() onlyProposer { 
     canceled = true;
