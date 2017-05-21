@@ -15,7 +15,7 @@ contract BetContract {
   uint public result;
   //constructor
   function BetContract(string homeTeam_, string awayTeam_, uint bettingOn_, 
-                            uint quota_, address mediator_) 
+                            uint quota_, uint quota0, address mediator_) 
                             payable {
     mediator = mediator_;
     homeTeam = homeTeam_;
@@ -24,7 +24,7 @@ contract BetContract {
     quota = quota_;
     created = now;
     canceled = false;
-    betPool = msg.value*quota_/1000;
+    betPool = msg.value*quota0 /1000;
     proposer = msg.sender;
     result = 3;
   }
