@@ -46,6 +46,10 @@ contract BetContract {
     _;
   }
 
+  function getNumOthers() constant returns (uint a){
+    a = otherAddrs.length;
+  }
+
   function getBetAmmount(address user) constant returns(uint a){
     a = otherBets[user];
   }
