@@ -1,6 +1,6 @@
 var http = require("http")
 var express = require("express");
-var ws = require("ws");
+var WebSocket = require("ws");
 
 var Web3 = require("web3");
 var TestRPC = require("ethereumjs-testrpc");
@@ -11,9 +11,10 @@ var solc = require("solc");
 
 var app = express();
 var server = http.createServer(app);
-var wss = new ws.Server({server});
+var wss = new WebSocket.Server({server});
 
-var clients = {};
+var clients = [];
+var client_ws = {};
 
 var web3 = new Web3();
 web3.setProvider(TestRPC.provider({"seed" : 42}));
@@ -31,9 +32,8 @@ var gasEstimate;
 (function init() {
     var source = fs.readFileSync("./contracts/BetContract.sol","utf8");
     var compiledContract = solc.compile(source,1);
-    console.log(compiledContract);
-    var abi = compiledContract.contracts[':BetContract'].interface;
-    bytecode = compiledContract.contracts[':BetContract'].bytecode;
+    var abi = compiledContract.contracts['BetContract'].interface;
+    bytecode = compiledContract.contracts['BetContract'].bytecode;
     web3.eth.estimateGas({data: bytecode}, function(err,est) {
         gasEstimate = 1.5 * est;
     });
@@ -48,25 +48,68 @@ app.get("/", function(req,res) {
 app.post("/mediate", function(req,res) {
     //poisci prave ws-je
     //ws.send() // cela struktura, in posebi spremenjen
+    console.log(req.headers);
 });
 
-function generate_response(id, mediated, result, callback) {
+
+function generate_response(id,mediated,result,ws) {
     var res = {};
-    res.mediated = {"mediated" : mediated , "result" : result};
-    console.log(id);
-    web3.eth.getBalance(id,function(err,balance) {
+    res.mediated = {"mediated" : mediated, "result" : result},
+    web3.eth.getBalance(id, function(err,balance) {
         res.balance = balance;
-        var address = contracts[0];
-        var betContract = BetContract.at(address);
-        console.log(betContract.proposer);
-        betContract.proposer(function(err,proposer) {
-            res.proposer = proposer;
-            callback(res);
-        })
+        generate_contracts(res,id,ws);
     });
-};
+}
+function generate_contracts(res,id,ws) {
+    var num = contracts.length;
+    res.my_bets = [];
+    res.bets = [];
+    generate_contracts_rec(res,id,num-1,ws);
+}
+function generate_contracts_rec(res,id,num,ws) {
+    if(num < 0) {
+        ws.send(JSON.stringify(res));
+    } else {
+        var contract_res = {};
+        var betContract = BetContract.at(contracts[num]);
+        betContract.proposer(function(err,proposer) {
+            contract_res.proposer = proposer;
+            betContract.mediator(function(err,mediator) {
+                contract_res.mediator = mediator;
+                betContract.quota(function(err,quota) {
+                    contract_res.quota = quota.toString();
+                    betContract.bettingOn(function(err,bettingOn) {
+                        contract_res.bettingOn = bettingOn.toString();
+                        betContract.homeTeam(function(err,homeTeam) {
+                            contract_res.homeTeam = homeTeam;
+                            betContract.awayTeam(function(err,awayTeam) {
+                                contract_res.awayTeam = awayTeam;
+                                betContract.betPool(function(err,available) {
+                                    contract_res.available = available.toString();
+                                    betContract.getBetAmmount(id,function(err,betAmount) {
+                                        contract_res.betAmount = betAmount.toString();
+                                        betContract.result(function(err,result) {
+                                            contract_res.result = result.toString();
+                                            if(id === proposer || betAmount != 0) {
+                                                res.my_bets.push(contract_res);
+                                            } else {
+                                                res.bets.push(contract_res);
+                                            }
+                                            generate_contracts_rec(res,id,num-1,ws);
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    }
+}
 
 function incoming(ws,message) {
+    console.log(message);
     data = JSON.parse(message);
 
     //razresi connect, new, accept, (mogoce mediate)
@@ -80,6 +123,9 @@ function incoming(ws,message) {
         case "accept":
             accept_bet(ws,data);
             break;
+        case "mediate":
+            mediate(ws,data);
+            break;
         case "test":
             test(ws,data);
             break;
@@ -87,15 +133,14 @@ function incoming(ws,message) {
 };
 
 function test(ws,req) {
-    generate_response(req.id,undefined,undefined,console.log);
+    console.log(contracts);
 };
 
 function connect(ws,req) {
-    clients[req.id] = ws;
-
-    // poisci my bets
-    // poisci vse bets
-    //ws.send() // vrni celo strukturo
+    console.log(req.id);
+    clients.push(req.id);
+    client_ws[req.id] = ws;
+    generate_response(req.id,undefined,undefined,ws);
 };
 
 function new_bet(ws,req) {
@@ -114,8 +159,13 @@ function new_bet(ws,req) {
                 // check address on the second call (contract deployed)
                 } else {
                     //console.log(myContract.address) // the contract address
-                    console.log(betContract);
+                    //console.log(betContract);
                     contracts.push(betContract.address);
+
+                    // PUSH
+                    for(var i=0; i<clients.length; ++i) {
+                        generate_response(clients[i],undefined,undefined,client_ws[clients[i]]);
+                    }
                 }
                 // Note that the returned "myContractReturned" === "myContract",
                 // so the returned "myContractReturned" object will also get the address set.
@@ -123,8 +173,6 @@ function new_bet(ws,req) {
                 console.log(err);
             }
         });
-    
-    //TODO wss.clients.forEach() // pushaj nov bet vsem clientom
 };
 
 function accept_bet(ws,req) {
@@ -135,14 +183,28 @@ function accept_bet(ws,req) {
             "value" : req.amount
         },
         function(err) {
-        if(err) {
-            console.log(err);
-        }
-        console.log("jeeees");
+            if(err) {
+                console.log(err);
+            }
         });
-    // poisci ws od ownerja
-    //ws.send() //pushaj accept ownerju
+
+    // PUSH
+    for(var i=0; i<clients.length; ++i) {
+        generate_response(clients[i],undefined,undefined,client_ws[clients[i]]);
+    }
 };
+
+function mediate(ws,req) {
+    var address = req.address;
+    var result = req.result;
+    var betContract = BetContract.at(address);
+    betContract.mediate(result, {from:req.id}, function(err) {
+        // push push push
+        for(var i=0; i<clients.length; ++i) {
+            generate_response(clients[i],address,result,client_ws[clients[i]]);
+        }
+    });
+}
 
 wss.on("connection", function connection(ws,req) {
     ws.on("message", message => incoming(ws,message));
