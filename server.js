@@ -74,6 +74,7 @@ function generate_contracts_rec(res,id,num,ws) {
                 contract_res.mediator = mediator;
                 betContract.quota(function(err,quota) {
                     contract_res.quota = parseFloat(quota.toString()) / 1000;
+                    var quota_origigi = contract_res.quota;
                     if(id === proposer) {
                         contract_res.quota = (1 / (contract_res.quota-1)) + 1;
                     }
@@ -84,7 +85,7 @@ function generate_contracts_rec(res,id,num,ws) {
                             betContract.awayTeam(function(err,awayTeam) {
                                 contract_res.awayTeam = awayTeam;
                                 betContract.betPool(function(err,available) {
-                                    contract_res.available = (parseFloat(available.toString())/contract_res.quota).toString();
+                                    contract_res.available = (parseFloat(available.toString())/quota_origigi).toString();
                                     betContract.getBetAmmount(id,function(err,betAmount) {
                                         contract_res.betAmount = (parseFloat(betAmount.toString())).toString();
                                         betContract.result(function(err,result) {
