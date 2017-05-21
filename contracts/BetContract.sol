@@ -24,8 +24,9 @@ contract BetContract {
     quota = quota_;
     created = now;
     canceled = false;
-    betPool = msg.value;
+    betPool = msg.value*quota_/1000;
     proposer = msg.sender;
+    otherAddrs[proposer] = 0;
     result = 3;
   }
   //modifiers
@@ -57,17 +58,20 @@ contract BetContract {
   }
 
 
+
+
   function bet() payable active{
     address newGuy = address(msg.sender);
     uint betSize = msg.value * quota / 1000;
-    if(betSize<=0 || betSize>betPool){
+    if(betSize<=0 || msg.value>betPool){
      throw;
     }
-    betPool -= betSize;
+    betPool -= msg.value;
     if (otherBets[newGuy]==0){
       otherAddrs.push(newGuy);
     }
     otherBets[newGuy] += betSize;
+   
   }
   function cancel() onlyProposer { 
     canceled = true;
