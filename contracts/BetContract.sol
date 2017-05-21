@@ -70,7 +70,7 @@ contract BetContract {
       otherAddrs.push(newGuy);
     }
     otherBets[newGuy] += betSize;
-    
+    otherBets[proposer] = address(this).balance;
   }
   function cancel() onlyProposer { 
     canceled = true;
