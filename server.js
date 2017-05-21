@@ -32,8 +32,8 @@ var gasEstimate;
     var source = fs.readFileSync("./contracts/BetContract.sol","utf8");
     var compiledContract = solc.compile(source,1);
     console.log(compiledContract);
-    var abi = compiledContract.contracts[':BetContract'].interface;
-    bytecode = compiledContract.contracts[':BetContract'].bytecode;
+    var abi = compiledContract.contracts['BetContract'].interface;
+    bytecode = compiledContract.contracts['BetContract'].bytecode;
     web3.eth.estimateGas({data: bytecode}, function(err,est) {
         gasEstimate = 1.5 * est;
     });
@@ -61,7 +61,9 @@ function generate_response(id, mediated, result, callback) {
         console.log(betContract.proposer);
         betContract.proposer(function(err,proposer) {
             res.proposer = proposer;
-            callback(res);
+            betContract.otherAddrs(0,function(err,otherAddrs) {
+                callback(otherAddrs);
+            });
         })
     });
 };
